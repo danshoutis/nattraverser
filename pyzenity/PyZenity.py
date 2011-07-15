@@ -249,9 +249,17 @@ def Warning(text):
 def Progress(text='', percentage=0, auto_close=False, pulsate=False):
     """Show a progress dialog to the user.
     
-    This will raise a Zenity Progress Dialog.  It returns a callback that 
-    accepts two arguments.  The first is a numeric value of the percent 
-    complete.  The second is a message about the progress.
+    This will raise a Zenity Progress Dialog.  It returns a tuple of
+     (prog_cb, close_cb, fids), where 
+
+     prog_cb is a callback that accepts two arguments.  The first is a
+      numeric value of the percent complete.  The second is a message
+      about the progress.
+     
+     close_cb is a callback to close and exit the process.
+
+     fids is a tuple of the file descriptors for the process's
+       stdin and stdout pipes.
 
     NOTE: This function sends the SIGHUP signal if the user hits the cancel 
           button.  You must connect to this signal if you do not want your 
@@ -263,13 +271,17 @@ def Progress(text='', percentage=0, auto_close=False, pulsate=False):
                  100%.
     pulsate - True is the status should pulsate instead of progress."""
 
+    real_auto_close = True
+
     args = []
     if text:
         args.append('--text=%s' % text)
     if percentage:
         args.append('--percentage=%s' % percentage)
-    if auto_close:
-        args.append('--auto-close=%s' % auto_close)
+
+    args.append('--auto-close=%s' % real_auto_close)
+    args.append('--auto-kill=%s' % True)
+
     if pulsate:
         args.append('--pulsate=%s' % pulsate)
 
@@ -278,12 +290,22 @@ def Progress(text='', percentage=0, auto_close=False, pulsate=False):
     def update(percent, message=''):
         if type(percent) == float:
             percent = int(percent * 100)
+
+        if (percent >= 100 and not auto_close):
+            percent = 99
+
         p.stdin.write(str(percent) + '\n')
         if message:
             p.stdin.write('# %s\n' % message)
         return p.returncode
 
-    return update
+    def close():
+        p.stdin.write("100\n")
+        p.stdin.close()
+        p.stdout.close()
+        return p.wait()
+
+    return (update,close,(p.stdin.fileno(),p.stdout.fileno()))
 
 
 def GetText(text='', entry_text='', password=False):
