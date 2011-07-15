@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 
 from pystun.stun import get_nat_type
-import pyzenity.PyZenity as zdlg
+
 import select, os, sys, time
 import socket
 import struct
 import fcntl
 import subprocess
+
+if (os.environ.get("DISPLAY")):
+    import pyzenity.PyZenity as zdlg
+    SUCMD = "gksudo"
+else:
+    import zen_fb as zdlg
+    SUCMD = "sudo"
 
 try: import simplejson as json
 except ImportError: import json as json
@@ -203,7 +210,9 @@ def configure_tun(ifname, local_addr, remote_addr):
             ifname,
             local_addr,
             "pointopoint",
-            remote_addr]
+            remote_addr,
+            "mtu",
+            1200]
     print("Configuring iface: %r" % args)
     assert(0 == subprocess.Popen(args).wait())
     print("Configured.")
@@ -295,7 +304,8 @@ def main_usermode(tcp_port=23,localconnect=True):
     main_rootmode([''] + args)
 
     # SCRATCH
-    #superusermode = subprocess.Popen(["gksudo",
+    global SUCMD
+    #superusermode = subprocess.Popen([SUCMD,
     #                                  sys.executable,
     #                                  os.path.abspath(__file__)] + args)
                                
@@ -341,7 +351,7 @@ def main_rootmode(args=sys.argv):
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
-        p = subprocess.Popen(["gksudo", sys.executable, os.path.abspath(__file__)])
+        p = subprocess.Popen([SUCMD, sys.executable, os.path.abspath(__file__)])
         p.wait()
     else:
         main_usermode()
