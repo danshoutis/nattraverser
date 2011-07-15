@@ -146,6 +146,7 @@ class PeerConnection(object):
 
 
         if (p.startswith(PeerConnection.ESC)):
+            print("Special, escaped!")
             return p[len(PeerConnection.ESC):]
 
         elif (p.startswith(PeerConnection.HELO)):
@@ -211,8 +212,9 @@ def configure_tun(ifname, local_addr, remote_addr):
             local_addr,
             "pointopoint",
             remote_addr,
-            "mtu",
-            1200]
+            "mtu", 
+            "800"]
+
     print("Configuring iface: %r" % args)
     assert(0 == subprocess.Popen(args).wait())
     print("Configured.")
